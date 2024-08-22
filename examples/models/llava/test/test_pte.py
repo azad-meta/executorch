@@ -7,9 +7,10 @@
 import sys
 
 import torch
-
+from executorch.examples.models.llava.image_util import prepare_image
 from executorch.examples.models.llava.model import LlavaModel
 from executorch.extension.pybindings.portable_lib import _load_for_executorch
+from PIL import Image
 
 # Custom ops has to be loaded after portable_lib.
 # I don't know how to stop UFMT so I'm just using if True: to avoid lint error
@@ -19,6 +20,12 @@ if True:
 
 def main():
     args = sys.argv[1:]
+    if len(args) == 0:
+        print(
+            "Usage: python test_pte.py <model_path> <image_path?>. If no image, will use default image."
+        )
+        sys.exit(1)
+
     llava_module = _load_for_executorch(args[0])
 
     llava_model = LlavaModel()
@@ -26,6 +33,10 @@ def main():
     prompt_before_image, resized, prompt_after_image = (
         llava_model.get_inputs_for_prefill()
     )
+    if len(args) == 2:
+        image_path = args[1]
+        image = Image.open(image_path)
+        resized = prepare_image(image, target_h=336, target_w=336)
 
     start_pos = 0
     # pte prefill prompt before img
